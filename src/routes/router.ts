@@ -1,7 +1,16 @@
 import { IncomingMessage, ServerResponse } from 'http';
-import { getUsers, getUserById, createUser, updateUser, deleteUser } from '../controllers/userController';
+import {
+  getUsers,
+  getUserById,
+  createUser,
+  updateUser,
+  deleteUser,
+} from '../controllers/userController';
 
-export function handleUsersRequest(req: IncomingMessage, res: ServerResponse): void {
+export function handleUsersRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+): void {
   const { method, url } = req;
 
   if (method === 'GET' && url === '/api/users') {
@@ -20,4 +29,3 @@ export function handleUsersRequest(req: IncomingMessage, res: ServerResponse): v
     res.end(JSON.stringify({ error: 'Endpoint not found' }));
   }
 }
-

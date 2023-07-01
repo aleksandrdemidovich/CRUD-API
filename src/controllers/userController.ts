@@ -10,7 +10,7 @@ export function getUsers(_req: IncomingMessage, res: ServerResponse): void {
 
 export function getUserById(req: IncomingMessage, res: ServerResponse): void {
   const userId = req.url?.split('/')[3];
-  if (!userId || !validate(userId!)) {
+  if (!userId || !validate(userId)) {
     res.statusCode = 400;
     res.end(JSON.stringify({ error: 'User ID is invalid (not uuid)' }));
     return;
@@ -55,7 +55,7 @@ export function createUser(req: IncomingMessage, res: ServerResponse): void {
 
 export function updateUser(req: IncomingMessage, res: ServerResponse): void {
   const userId = req.url?.split('/')[3];
-  if (!userId || !validate(userId!)) {
+  if (!userId || !validate(userId)) {
     res.statusCode = 400;
     res.end(JSON.stringify({ error: 'User ID is invalid (not uuid)' }));
     return;
@@ -94,7 +94,7 @@ export function updateUser(req: IncomingMessage, res: ServerResponse): void {
 
 export function deleteUser(req: IncomingMessage, res: ServerResponse): void {
   const userId = req.url?.split('/')[3];
-  if (!userId || !validate(userId!)) {
+  if (!userId || !validate(userId)) {
     res.statusCode = 400;
     res.end(JSON.stringify({ error: 'User ID is invalid (not uuid)' }));
     return;
