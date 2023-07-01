@@ -1,6 +1,10 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { find, findOneById, createOne, updateOne, removeOne } from '../db/db';
 import { validate } from 'uuid';
+import {
+  validateFieldsType,
+  validateRequiredFields,
+} from '../utils/validateFields';
 
 export function getUsers(_req: IncomingMessage, res: ServerResponse): void {
   const allUsers = find();
@@ -27,6 +31,7 @@ export function getUserById(req: IncomingMessage, res: ServerResponse): void {
 
 export function createUser(req: IncomingMessage, res: ServerResponse): void {
   let body = '';
+  let errors;
   req.on('data', (chunk) => {
     body += chunk.toString();
   });
@@ -38,9 +43,14 @@ export function createUser(req: IncomingMessage, res: ServerResponse): void {
         hobbies,
       }: { username: string; age: number; hobbies: string[] | [] } =
         JSON.parse(body);
-      if (!username || !age || !hobbies) {
+      if (validateRequiredFields(username, age, hobbies)) {
         res.statusCode = 400;
         res.end(JSON.stringify({ error: 'Missing required fields' }));
+        return;
+      }
+      if ((errors = validateFieldsType(username, age, hobbies))) {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: errors }));
         return;
       }
       const newUser = createOne(username, age, hobbies);
@@ -54,6 +64,7 @@ export function createUser(req: IncomingMessage, res: ServerResponse): void {
 }
 
 export function updateUser(req: IncomingMessage, res: ServerResponse): void {
+  let errors;
   const userId = req.url?.split('/')[3];
   if (!userId || !validate(userId)) {
     res.statusCode = 400;
@@ -72,9 +83,14 @@ export function updateUser(req: IncomingMessage, res: ServerResponse): void {
         hobbies,
       }: { username: string; age: number; hobbies: string[] } =
         JSON.parse(body);
-      if (!username || !age || !hobbies) {
+      if (validateRequiredFields(username, age, hobbies)) {
         res.statusCode = 400;
         res.end(JSON.stringify({ error: 'Missing required fields' }));
+        return;
+      }
+      if ((errors = validateFieldsType(username, age, hobbies))) {
+        res.statusCode = 404;
+        res.end(JSON.stringify({ error: errors }));
         return;
       }
       const updatedUser = updateOne(userId, username, age, hobbies);
