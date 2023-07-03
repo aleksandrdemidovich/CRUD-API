@@ -1,8 +1,7 @@
-import http, { IncomingMessage, ServerResponse } from 'http';
 import dotenv from 'dotenv';
-import { handleUsersRequest } from './routes/router';
-
 dotenv.config();
+import http, { IncomingMessage, ServerResponse } from 'http';
+import { handleUsersRequest } from './routes/router';
 
 const server = http.createServer(
   (req: IncomingMessage, res: ServerResponse) => {

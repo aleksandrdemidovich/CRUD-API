@@ -6,20 +6,20 @@ import {
   validateRequiredFields,
 } from '../utils/validateFields';
 
-export function getUsers(_req: IncomingMessage, res: ServerResponse): void {
-  const allUsers = find();
+export async function getUsers(_req: IncomingMessage, res: ServerResponse) {
+  const allUsers = await find();
   res.statusCode = 200;
   res.end(JSON.stringify(allUsers));
 }
 
-export function getUserById(req: IncomingMessage, res: ServerResponse): void {
+export async function getUserById(req: IncomingMessage, res: ServerResponse) {
   const userId = req.url?.split('/')[3];
   if (!userId || !validate(userId)) {
     res.statusCode = 400;
     res.end(JSON.stringify({ error: 'User ID is invalid (not uuid)' }));
     return;
   }
-  const user = findOneById(userId);
+  const user = await findOneById(userId);
   if (user) {
     res.statusCode = 200;
     res.end(JSON.stringify(user));
@@ -29,13 +29,13 @@ export function getUserById(req: IncomingMessage, res: ServerResponse): void {
   }
 }
 
-export function createUser(req: IncomingMessage, res: ServerResponse): void {
+export function createUser(req: IncomingMessage, res: ServerResponse) {
   let body = '';
   let errors;
   req.on('data', (chunk) => {
     body += chunk.toString();
   });
-  req.on('end', () => {
+  req.on('end', async () => {
     try {
       const {
         username,
@@ -53,7 +53,7 @@ export function createUser(req: IncomingMessage, res: ServerResponse): void {
         res.end(JSON.stringify({ error: errors }));
         return;
       }
-      const newUser = createOne(username, age, hobbies);
+      const newUser = await createOne({ username, age, hobbies });
       res.statusCode = 201;
       res.end(JSON.stringify(newUser));
     } catch (error) {
@@ -75,7 +75,7 @@ export function updateUser(req: IncomingMessage, res: ServerResponse): void {
   req.on('data', (chunk) => {
     body += chunk.toString();
   });
-  req.on('end', () => {
+  req.on('end', async () => {
     try {
       const {
         username,
@@ -93,7 +93,12 @@ export function updateUser(req: IncomingMessage, res: ServerResponse): void {
         res.end(JSON.stringify({ error: errors }));
         return;
       }
-      const updatedUser = updateOne(userId, username, age, hobbies);
+      const updatedUser = await updateOne({
+        id: userId,
+        username,
+        age,
+        hobbies,
+      });
       if (updatedUser) {
         res.statusCode = 200;
         res.end(JSON.stringify(updatedUser));
@@ -108,14 +113,14 @@ export function updateUser(req: IncomingMessage, res: ServerResponse): void {
   });
 }
 
-export function deleteUser(req: IncomingMessage, res: ServerResponse): void {
+export async function deleteUser(req: IncomingMessage, res: ServerResponse) {
   const userId = req.url?.split('/')[3];
   if (!userId || !validate(userId)) {
     res.statusCode = 400;
     res.end(JSON.stringify({ error: 'User ID is invalid (not uuid)' }));
     return;
   }
-  const deleted = removeOne(userId);
+  const deleted = await removeOne(userId);
   if (deleted) {
     res.statusCode = 204;
     res.end();

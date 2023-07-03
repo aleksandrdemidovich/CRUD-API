@@ -1,97 +1,168 @@
-import { v4 } from 'uuid';
-import cluster, { Worker } from 'cluster';
+import cluster from 'cluster';
+import { version as uuidVersion, validate as uuidValidate, v4 } from 'uuid';
+import { DbRequest, DbResponse, User, DbOperation } from './dbTypes';
+import { isUser } from '../utils/userUtils';
 
-interface DbOperation {
-  type: 'find' | 'findOneById' | 'createOne' | 'updateOne' | 'removeOne';
-  data?: any;
-}
+let users: User[] = [];
+const multi = JSON.parse(process.env.MULTI ?? 'true');
 
-interface User {
-  id: string;
-  username: string;
-  age: number;
-  hobbies: string[] | [];
-}
+const isDbRequest = (message: DbRequest): message is DbRequest => {
+  return (
+    !!message &&
+    !!message.operation &&
+    typeof message.operation === 'string' &&
+    (message.data === undefined ||
+      typeof message.data === 'string' ||
+      isUser(message.data))
+  );
+};
 
-const users: User[] = [];
+const isDbResponse = (message: DbResponse): message is DbResponse => {
+  return (
+    message &&
+    !!message.operation &&
+    typeof message.operation === 'string' &&
+    (message.data === undefined ||
+      message.data instanceof Object ||
+      typeof message.data === 'string')
+  );
+};
 
-function find(): User[] {
-  return users;
-}
+if (multi && cluster.isPrimary) {
+  cluster.on('message', (worker, message: DbRequest, _handle) => {
+    if (!isDbRequest(message)) {
+      return;
+    }
 
-function findOneById(userId: string): User | undefined {
-  return users.find((user) => user.id === userId);
-}
-
-function createOne(username: string, age: number, hobbies: string[]): User {
-  const id = v4();
-  const newUser = { id, username, age, hobbies };
-  users.push(newUser);
-  return newUser;
-}
-
-function updateOne(
-  userId: string,
-  username: string,
-  age: number,
-  hobbies: string[],
-): User | undefined {
-  const userIndex = users.findIndex((user) => user.id === userId);
-  if (userIndex !== -1) {
-    const updatedUser: User = { id: userId, username, age, hobbies };
-    users[userIndex] = updatedUser;
-    return updatedUser;
-  }
-  return undefined;
-}
-
-function removeOne(userId: string): boolean {
-  const userIndex = users.findIndex((user) => user.id === userId);
-  if (userIndex !== -1) {
-    users.splice(userIndex, 1);
-    return true;
-  }
-  return false;
-}
-
-if (cluster.isPrimary) {
-  cluster.on('message', (worker: Worker, message: DbOperation) => {
-    switch (message.type) {
+    const { operation, data } = message;
+    switch (operation) {
       case 'find':
-        worker.send({ type: 'find', data: users });
+        worker.send({ ok: true, operation, data: users });
         break;
       case 'findOneById':
-        const user = findOneById(message.data);
-        worker.send({ type: 'findOneById', data: user });
+        if (
+          typeof data === 'string' &&
+          uuidValidate(data) &&
+          uuidVersion(data) === 4
+        ) {
+          worker.send({
+            ok: true,
+            operation,
+            data: users.find((u) => u.id === data),
+          });
+        } else {
+          worker.send({ ok: false, operation });
+        }
         break;
       case 'createOne':
-        const newUser = createOne(
-          message.data.username,
-          message.data.age,
-          message.data.hobbies,
-        );
-        worker.send({ type: 'createOne', data: newUser });
+        if (data === undefined || typeof data === 'string' || !isUser(data)) {
+          worker.send({ ok: false, operation });
+          return;
+        }
+        const user = { id: v4(), ...data };
+        users = [...users, user];
+        worker.send({ ok: true, operation, data: user });
         break;
       case 'updateOne':
-        const updatedUser = updateOne(
-          message.data.id,
-          message.data.username,
-          message.data.age,
-          message.data.hobbies,
-        );
-        worker.send({ type: 'updateOne', data: updatedUser });
+        if (data === undefined || typeof data === 'string' || !isUser(data)) {
+          worker.send({ ok: false, operation });
+          return;
+        }
+        if (!users.find((value) => value.id === data.id)) {
+          worker.send({ ok: false, operation });
+          return;
+        }
+        users = [...users.filter((value) => value.id !== data.id), data];
+        worker.send({ ok: true, operation, data });
         break;
       case 'removeOne':
-        const isDeleted = removeOne(message.data);
-        worker.send({ type: 'removeOne', data: isDeleted });
+        users = users.filter((value) => value.id !== data);
+        worker.send({ ok: true, operation });
+        break;
+
+      default:
+        worker.send({ ok: false, operation });
         break;
     }
   });
-
-  cluster.on('exit', (worker: Worker, _code: number, _signal: string) => {
-    console.log(`Worker ${worker.process.pid} died`);
-    cluster.fork();
-  });
 }
 
-export { find, findOneById, createOne, updateOne, removeOne };
+export const find = async () => {
+  if (multi) {
+    return performDbOperation<User[]>('find');
+  }
+  return users;
+};
+
+export const findOneById = async (id: string) => {
+  if (multi) {
+    return performDbOperation<User>('findOneById', id);
+  }
+  return users.find((u) => u.id === id);
+};
+
+export const createOne = async (user: User) => {
+  if (multi) {
+    return performDbOperation<User>('createOne', user);
+  }
+  const newUser = {
+    id: v4(),
+    ...user,
+  };
+  users = [...users, newUser];
+  return newUser;
+};
+
+export const updateOne = async (user: User) => {
+  if (multi) {
+    return performDbOperation<User>('updateOne', user);
+  }
+  if (users.find((value) => value.id === user.id)) {
+    users = [...users.filter((value) => value.id !== user.id), user];
+    return user;
+  } else {
+    return false;
+  }
+};
+
+export const removeOne = async (id: string) => {
+  if (multi) {
+    return performDbOperation('removeOne', id);
+  }
+  if (users.find((value) => value.id === id)) {
+    users = users.filter((value) => value.id !== id);
+  } else {
+    return false;
+  }
+  return true;
+};
+
+const performDbOperation = <User>(
+  operation: DbOperation,
+  data?: User | string,
+): Promise<unknown> => {
+  if (cluster.isPrimary) {
+    throw new Error(
+      'DB operations should be called only from Workers, not from Primary thread',
+    );
+  }
+  return new Promise((resolve, _reject) => {
+    const listener = (message: any) => {
+      if (!isDbResponse(message)) {
+        return;
+      }
+      resolve(message.data);
+      process.removeListener('message', listener);
+    };
+    process.addListener('message', listener);
+    process.send?.({ operation, data });
+  });
+};
+
+export default {
+  find,
+  findOneById,
+  createOne,
+  updateOne,
+  removeOne,
+};

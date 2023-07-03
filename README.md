@@ -16,6 +16,12 @@ Your task is to implement simple CRUD API using in-memory database underneath.
 export PORT=4000
 ```
 
+3. To enable/disable "Parallelism" mode use `.env` file:
+
+```bash
+export MULTI=true/false
+```
+
 ## Run
 
 Run `npm run start:dev` to run single thread in the Development mode

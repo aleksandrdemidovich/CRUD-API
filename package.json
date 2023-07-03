@@ -9,12 +9,12 @@
   "scripts": {
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"src/**/*.ts\" --fix",
-    "build": "tsc",
+    "build": "webpack",
     "start:dev": "nodemon --watch \"*.ts\" --exec \"ts-node\" ./src/index.ts",
-    "start:prod": "tsc && node dist/src/index.js",
-    "start:multi": "nodemon --watch \"*.ts\" --exec \"ts-node\" ./src/loadBalancer.ts",
-    "test": "jest --silent",
-    "test:verbose": "jest"
+    "start:prod": "webpack && node build/main-bundle.js",
+    "start:multi": "cross-env MULTI=true PORT=4000 nodemon --watch \"*.ts\" --exec \"ts-node\" ./src/loadBalancer.ts",
+    "test": "cross-env PORT=3000  MULTI=false jest --silent",
+    "test:verbose": "cross-env PORT=3000 MULTI=false jest"
   },
   "author": "",
   "license": "ISC",
@@ -36,11 +36,13 @@
     "nodemon": "^2.0.22",
     "prettier": "^2.8.8",
     "supertest": "^6.3.3",
+    "ts-loader": "^9.4.4",
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.4",
     "uuid": "^9.0.0",
     "webpack": "^5.88.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "webpack-node-externals": "^3.0.0"
   }
 }

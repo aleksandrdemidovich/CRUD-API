@@ -2,11 +2,8 @@ import cluster from 'cluster';
 import http, { IncomingMessage, ServerResponse } from 'http';
 import { availableParallelism } from 'os';
 import { handleUsersRequest } from './routes/router';
-import dotenv from 'dotenv';
 
-dotenv.config();
-
-export const runMulti = (port: number): any => {
+export const runMulti = (port: number): void => {
   if (cluster.isPrimary) {
     process.on('uncaughtException', (error) => console.error(error.message));
 
