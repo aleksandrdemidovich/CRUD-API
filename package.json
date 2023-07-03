@@ -11,7 +11,8 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "build": "tsc",
     "start:dev": "nodemon --watch \"*.ts\" --exec \"ts-node\" ./src/index.ts",
-    "start:prod": "tsc && node dist/index.js",
+    "start:prod": "tsc && node dist/src/index.js",
+    "start:multi": "nodemon --watch \"*.ts\" --exec \"ts-node\" ./src/loadBalancer.ts",
     "test": "jest --silent",
     "test:verbose": "jest"
   },
