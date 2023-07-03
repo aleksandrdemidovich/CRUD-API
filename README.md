@@ -13,12 +13,8 @@ Your task is to implement simple CRUD API using in-memory database underneath.
 2. To customize the PORT please use `.env` file:
 
 ```bash
-export PORT=9000
+export PORT=4000
 ```
-
-### `.env` file at the working dir will be used
-
-If you run `node build/main-bundle.js`, your `.env` file should be in the root dir. If you change your dir to `build` and run `node main-bundle.js`, your `.env` file should be in the build dir.
 
 ## Run
 
